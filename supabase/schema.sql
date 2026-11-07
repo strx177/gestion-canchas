@@ -1,3 +1,5 @@
+-- Esquema inicial histórico. Para el esquema actual y sus políticas RLS, aplica
+-- en orden los archivos de supabase/migrations/ en lugar de este archivo.
 create extension if not exists "uuid-ossp";
 
 create table if not exists courts (
@@ -41,13 +43,13 @@ create table if not exists reservations (
 create index if not exists reservations_court_time_idx on reservations(court_id, starts_at, ends_at);
 
 create or replace function prevent_overlapping_reservations()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = public as $$
 begin
   if new.status <> 'cancelled' and exists (
     select 1 from reservations r
     where r.court_id = new.court_id
       and r.status <> 'cancelled'
-      and r.id <> coalesce(new.id, uuid_nil())
+      and r.id <> new.id
       and tstzrange(r.starts_at, r.ends_at, '[)') && tstzrange(new.starts_at, new.ends_at, '[)')
   ) then
     raise exception 'La cancha ya está reservada en ese horario';
