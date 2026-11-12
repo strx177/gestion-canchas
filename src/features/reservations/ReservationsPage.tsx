@@ -76,7 +76,7 @@ export function ReservationsPage() {
           </div>
           {filteredReservations.length ? (
             <div className="table-scroll"><table className="data-table">
-              <thead><tr><th>RESERVA</th><th>EQUIPO Y CLIENTE</th><th>CANCHA</th><th>FECHA Y HORA</th><th>ESTADO</th><th>MONTO</th>{canManage && <th>ACCIONES</th>}</tr></thead>
+              <thead><tr><th>RESERVA</th><th>EQUIPO Y CLIENTE</th><th>CANCHA</th><th>DEPORTE</th><th>FECHA Y HORA</th><th>ESTADO</th><th>MONTO</th>{canManage && <th>ACCIONES</th>}</tr></thead>
               <tbody>{filteredReservations.map((reservation) => {
                 const court = courts.find((item) => item.id === reservation.court_id);
                 const customer = customers.find((item) => item.id === reservation.customer_id);
@@ -85,9 +85,10 @@ export function ReservationsPage() {
                   <td><strong>#{reservation.id.slice(0, 8)}</strong></td>
                   <td><strong>{team?.name ?? 'Sin equipo'}</strong><small>{customer?.full_name ?? 'Cliente no encontrado'}</small></td>
                   <td>{court?.name ?? 'Cancha no encontrada'}</td>
+                  <td>{reservation.sport}</td>
                   <td><strong>{formatDate(reservation.starts_at)}</strong><small>{formatTime(reservation.starts_at)} – {formatTime(reservation.ends_at)}</small></td>
                   <td><StatusBadge status={reservation.status} /></td>
-                  <td><strong>{formatCurrency(reservation.total_amount)}</strong></td>
+                  <td><strong>{formatCurrency(reservation.total_amount)}</strong>{reservation.applied_discount_percent > 0 && <small>{reservation.applied_discount_percent}% de descuento</small>}</td>
                   {canManage && <td><div className="row-actions">
                     {reservation.status === 'pending' && <button className="secondary-button" disabled={savingId === reservation.id} onClick={() => void changeStatus(reservation.id, 'confirmed')}>Confirmar</button>}
                     {reservation.status !== 'cancelled' && <button className="secondary-button danger-button" disabled={savingId === reservation.id} onClick={() => void changeStatus(reservation.id, 'cancelled')}>Cancelar</button>}

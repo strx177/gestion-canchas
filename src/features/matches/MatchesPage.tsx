@@ -10,6 +10,8 @@ import { supabase } from '../../lib/supabase';
 import type { Match, Tournament } from '../../types/database';
 import { santiagoLocalToIso } from '../../utils/dateTime';
 import { formatDate, formatTime } from '../../utils/format';
+import { getTodayKey } from '../../utils/format';
+import { courtEndTimes, courtStartTimes } from '../../utils/courtSchedule';
 
 interface Referee { id: string; full_name: string }
 type MatchDialog = 'create' | { result: Match } | null;
@@ -71,8 +73,9 @@ export function MatchesPage() {
     let start: string;
     let end: string;
     try {
-      start = santiagoLocalToIso(String(form.get('starts_at')));
-      end = santiagoLocalToIso(String(form.get('ends_at')));
+      const date = String(form.get('date'));
+      start = santiagoLocalToIso(`${date}T${String(form.get('starts_at'))}`);
+      end = santiagoLocalToIso(`${date}T${String(form.get('ends_at'))}`);
     } catch (validationError) {
       setActionError(validationError instanceof Error ? validationError.message : 'Revisa la fecha del partido.');
       return;
@@ -143,7 +146,12 @@ export function MatchesPage() {
       </div>
       <label className="form-field">Árbitro<select name="referee_id"><option value="">Sin asignar</option>{referees.map((referee) => <option value={referee.id} key={referee.id}>{referee.full_name}</option>)}</select></label>
       <label className="form-field">Cancha (opcional)<select name="court_id"><option value="">Sin asignar</option>{courts.filter((court) => court.status === 'available').map((court) => <option value={court.id} key={court.id}>{court.name}</option>)}</select></label>
-      <div className="form-grid"><label className="form-field">Inicio<input name="starts_at" type="datetime-local" required /></label><label className="form-field">Término<input name="ends_at" type="datetime-local" required /></label></div>
+      <label className="form-field">Fecha<input name="date" type="date" min={getTodayKey()} defaultValue={getTodayKey()} required /></label>
+      <div className="form-grid">
+        <label className="form-field">Inicio<select name="starts_at" defaultValue={courtStartTimes[0]} required>{courtStartTimes.map((time) => <option key={time}>{time}</option>)}</select></label>
+        <label className="form-field">Término<select name="ends_at" defaultValue={courtEndTimes[1]} required>{courtEndTimes.map((time) => <option key={time}>{time}</option>)}</select></label>
+      </div>
+      <p className="form-hint">Los partidos deben comenzar y terminar el mismo día, en bloques de 30 minutos entre las 08:00 y las 21:00.</p>
       <AuthNotice error={actionError} />
     </Modal>}
     {dialog && dialog !== 'create' && <Modal title="Registrar resultado" onClose={() => setDialog(null)} onSubmit={(event) => void saveResult(event)} submitting={submitting}>

@@ -9,17 +9,17 @@ import { useLayoutSearch } from '../../hooks/useLayoutSearch';
 const moduleDescriptions: Record<string, string> = {
   Clientes: 'Consulta de clientes almacenados en Supabase.',
   Equipos: 'Consulta de equipos almacenados en Supabase.',
-  Pagos: 'El esquema de pagos se definirá en el módulo correspondiente.',
+  Pagos: 'Consulta los pagos registrados y el saldo de las reservas.',
   Mantenimiento: 'Las tareas de mantenimiento y sus bloqueos se incorporarán en su módulo.',
   Notificaciones: 'El centro de notificaciones se conectará cuando exista su tabla y servicio.',
   Torneos: 'Los datos de torneos y participantes aún no forman parte del esquema inicial.',
   Partidos: 'Partidos y asignaciones se incorporarán junto con el módulo de torneos.',
   'Tabla de posiciones': 'La clasificación se calculará a partir de partidos y resultados persistidos.',
-  'Ingresos y ocupación': 'Los reportes se calcularán sobre datos persistidos, no sobre valores de muestra.',
+  'Ingresos y ocupación': 'Estadísticas de ingresos, ocupación, reservas y demanda horaria con filtros de período.',
   Reportes: 'Los reportes se conectarán cuando se definan sus consultas y filtros.',
-  Promociones: 'La administración de promociones se implementará en una etapa posterior.',
+  Promociones: 'Crea y gestiona descuentos por fecha, canchas y bloques horarios.',
   'Usuarios y permisos': 'Los perfiles, roles y políticas RLS se controlan mediante Supabase.',
-  'Registro de actividad': 'La auditoría se mostrará cuando exista su tabla y servicio.'
+  'Registro de actividad': 'Acciones importantes registradas automáticamente desde la base de datos.'
 };
 
 export function ModulePage() {

@@ -45,7 +45,6 @@ export type Database = {
         Row: {
           id: string;
           name: string;
-          sport: string;
           status: string;
           hourly_rate: number;
           created_at: string;
@@ -53,7 +52,6 @@ export type Database = {
         Insert: {
           id?: string;
           name: string;
-          sport: string;
           status?: string;
           hourly_rate?: number;
           created_at?: string;
@@ -61,7 +59,6 @@ export type Database = {
         Update: {
           id?: string;
           name?: string;
-          sport?: string;
           status?: string;
           hourly_rate?: number;
           created_at?: string;
@@ -127,36 +124,45 @@ export type Database = {
           court_id: string;
           customer_id: string;
           team_id: string | null;
+          sport: string;
           starts_at: string;
           ends_at: string;
           status: string;
           total_amount: number;
           notes: string | null;
           created_at: string;
+          promotion_id: string | null;
+          applied_discount_percent: number;
         };
         Insert: {
           id?: string;
           court_id: string;
           customer_id: string;
           team_id?: string | null;
+          sport: string;
           starts_at: string;
           ends_at: string;
           status?: string;
           total_amount?: number;
           notes?: string | null;
           created_at?: string;
+          promotion_id?: string | null;
+          applied_discount_percent?: number;
         };
         Update: {
           id?: string;
           court_id?: string;
           customer_id?: string;
           team_id?: string | null;
+          sport?: string;
           starts_at?: string;
           ends_at?: string;
           status?: string;
           total_amount?: number;
           notes?: string | null;
           created_at?: string;
+          promotion_id?: string | null;
+          applied_discount_percent?: number;
         };
         Relationships: [
           {
@@ -212,6 +218,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      court_schedule_blocks: {
+        Row: {
+          id: string;
+          court_id: string;
+          weekday: number;
+          starts_at: string;
+          is_available: boolean;
+        };
+        Insert: {
+          id?: string;
+          court_id: string;
+          weekday: number;
+          starts_at: string;
+          is_available?: boolean;
+        };
+        Update: {
+          id?: string;
+          court_id?: string;
+          weekday?: number;
+          starts_at?: string;
+          is_available?: boolean;
+        };
+        Relationships: [];
+      };
       maintenance_periods: {
         Row: {
           id: string;
@@ -251,7 +281,7 @@ export type Database = {
       payments: {
         Row: {
           id: string;
-          reservation_id: string;
+          reservation_id: string | null;
           amount: number;
           method: 'cash' | 'card' | 'transfer' | 'other';
           status: 'paid' | 'refunded';
@@ -261,7 +291,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          reservation_id: string;
+          reservation_id: string | null;
           amount: number;
           method: 'cash' | 'card' | 'transfer' | 'other';
           status?: 'paid' | 'refunded';
@@ -271,7 +301,7 @@ export type Database = {
         };
         Update: {
           id?: string;
-          reservation_id?: string;
+          reservation_id?: string | null;
           amount?: number;
           method?: 'cash' | 'card' | 'transfer' | 'other';
           status?: 'paid' | 'refunded';
@@ -413,6 +443,99 @@ export type Database = {
         };
         Relationships: [];
       };
+      promotions: {
+        Row: {
+          id: string;
+          name: string;
+          promotion_date: string;
+          discount_percent: number;
+          applies_to_all_courts: boolean;
+          status: 'active' | 'inactive';
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          promotion_date: string;
+          discount_percent: number;
+          applies_to_all_courts?: boolean;
+          status?: 'active' | 'inactive';
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          promotion_date?: string;
+          discount_percent?: number;
+          applies_to_all_courts?: boolean;
+          status?: 'active' | 'inactive';
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      promotion_courts: {
+        Row: { promotion_id: string; court_id: string };
+        Insert: { promotion_id: string; court_id: string };
+        Update: { promotion_id?: string; court_id?: string };
+        Relationships: [];
+      };
+      promotion_time_blocks: {
+        Row: {
+          id: string;
+          promotion_id: string;
+          starts_at: string;
+          ends_at: string;
+        };
+        Insert: {
+          id?: string;
+          promotion_id: string;
+          starts_at: string;
+          ends_at: string;
+        };
+        Update: {
+          id?: string;
+          promotion_id?: string;
+          starts_at?: string;
+          ends_at?: string;
+        };
+        Relationships: [];
+      };
+      activity_logs: {
+        Row: {
+          id: string;
+          actor_id: string | null;
+          actor_name: string;
+          actor_role: AppRole | null;
+          event_type: string;
+          description: string;
+          target_id: string | null;
+          occurred_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_id?: string | null;
+          actor_name: string;
+          actor_role?: AppRole | null;
+          event_type: string;
+          description: string;
+          target_id?: string | null;
+          occurred_at?: string;
+        };
+        Update: {
+          id?: string;
+          actor_id?: string | null;
+          actor_name?: string;
+          actor_role?: AppRole | null;
+          event_type?: string;
+          description?: string;
+          target_id?: string | null;
+          occurred_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -431,11 +554,25 @@ export type Database = {
         };
         Returns: undefined;
       };
+      save_promotion: {
+        Args: {
+          target_promotion_id: string | null;
+          target_name: string;
+          target_date: string;
+          target_discount_percent: number;
+          target_applies_to_all_courts: boolean;
+          target_status: 'active' | 'inactive';
+          target_court_ids: string[];
+          target_time_blocks: Json;
+        };
+        Returns: Promotion;
+      };
       create_reservation: {
         Args: {
           target_court_id: string;
           target_starts_at: string;
           duration_minutes: number;
+          target_sport: string;
           target_customer_id?: string | null;
           target_team_id?: string | null;
           target_notes?: string | null;
@@ -480,10 +617,14 @@ export type Customer = Database['public']['Tables']['customers']['Row'];
 export type Team = Database['public']['Tables']['teams']['Row'];
 export type Reservation = Database['public']['Tables']['reservations']['Row'];
 export type CourtSchedule = Database['public']['Tables']['court_schedules']['Row'];
+export type CourtScheduleBlock = Database['public']['Tables']['court_schedule_blocks']['Row'];
 export type MaintenancePeriod = Database['public']['Tables']['maintenance_periods']['Row'];
 export type Payment = Database['public']['Tables']['payments']['Row'];
 export type Tournament = Database['public']['Tables']['tournaments']['Row'];
 export type Match = Database['public']['Tables']['matches']['Row'];
+export type Promotion = Database['public']['Tables']['promotions']['Row'];
+export type PromotionTimeBlock = Database['public']['Tables']['promotion_time_blocks']['Row'];
+export type ActivityLog = Database['public']['Tables']['activity_logs']['Row'];
 
 export interface FacilityData {
   courts: Court[];

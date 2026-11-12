@@ -10,6 +10,8 @@ import { supabase } from '../../lib/supabase';
 import type { MaintenancePeriod } from '../../types/database';
 import { santiagoLocalToIso } from '../../utils/dateTime';
 import { formatDate, formatTime } from '../../utils/format';
+import { courtEndTimes, courtStartTimes } from '../../utils/courtSchedule';
+import { getTodayKey } from '../../utils/format';
 
 const statusNames: Record<MaintenancePeriod['status'], string> = {
   scheduled: 'Programado', in_progress: 'En curso', completed: 'Completado', cancelled: 'Cancelado'
@@ -43,8 +45,9 @@ export function MaintenancePage() {
     const form = new FormData(event.currentTarget);
     setSubmitting(true); setActionError(null);
     try {
-      const startsAt = santiagoLocalToIso(String(form.get('starts_at')));
-      const endsAt = santiagoLocalToIso(String(form.get('ends_at')));
+      const date = String(form.get('date'));
+      const startsAt = santiagoLocalToIso(`${date}T${String(form.get('starts_at'))}`);
+      const endsAt = santiagoLocalToIso(`${date}T${String(form.get('ends_at'))}`);
       if (new Date(endsAt) <= new Date(startsAt)) throw new Error('El término debe ser posterior al inicio.');
       const result = await supabase.from('maintenance_periods').insert({
         court_id: String(form.get('court_id')),
@@ -92,8 +95,12 @@ export function MaintenancePage() {
       <label className="form-field">Cancha<select name="court_id" required>{courts.map((court) => <option key={court.id} value={court.id}>{court.name}</option>)}</select></label>
       <label className="form-field">Título<input name="title" required maxLength={120} /></label>
       <label className="form-field">Descripción<textarea name="description" rows={2} maxLength={500} /></label>
-      <label className="form-field">Inicio<input name="starts_at" type="datetime-local" required /></label>
-      <label className="form-field">Término<input name="ends_at" type="datetime-local" required /></label>
+      <label className="form-field">Fecha<input name="date" type="date" min={getTodayKey()} defaultValue={getTodayKey()} required /></label>
+      <div className="form-grid">
+        <label className="form-field">Inicio<select name="starts_at" defaultValue={courtStartTimes[0]} required>{courtStartTimes.map((time) => <option key={time}>{time}</option>)}</select></label>
+        <label className="form-field">Término<select name="ends_at" defaultValue={courtEndTimes[1]} required>{courtEndTimes.map((time) => <option key={time}>{time}</option>)}</select></label>
+      </div>
+      <p className="form-hint">El mantenimiento debe comenzar y terminar el mismo día, en bloques de 30 minutos entre las 08:00 y las 21:00.</p>
       <AuthNotice error={actionError} />
     </Modal>}
   </DataState>;

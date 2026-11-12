@@ -4,13 +4,13 @@ import { DataState } from '../../components/DataState';
 import { EmptyState } from '../../components/EmptyState';
 import { Icon } from '../../components/Icon';
 import { supabase } from '../../lib/supabase';
-import type { CourtSchedule, Payment } from '../../types/database';
+import type { CourtScheduleBlock, Payment } from '../../types/database';
 import { formatCurrency, formatDate, getDateKey } from '../../utils/format';
 
 export function ReportsPage() {
   const { courts, reservations } = useFacilityData();
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [schedules, setSchedules] = useState<CourtSchedule[]>([]);
+  const [schedules, setSchedules] = useState<CourtScheduleBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -18,7 +18,7 @@ export function ReportsPage() {
     setLoading(true); setError(null);
     const [paymentsResult, schedulesResult] = await Promise.all([
       supabase.from('payments').select('*').eq('status', 'paid').order('created_at', { ascending: false }),
-      supabase.from('court_schedules').select('*')
+      supabase.from('court_schedule_blocks').select('*')
     ]);
     if (paymentsResult.error) setError(paymentsResult.error.message);
     else if (schedulesResult.error) setError(schedulesResult.error.message);
@@ -29,12 +29,10 @@ export function ReportsPage() {
 
   const revenue = payments.reduce((total, item) => total + Number(item.amount), 0);
   const activeReservations = reservations.filter((item) => item.status !== 'cancelled');
-  const capacityHours = schedules.reduce((total, item) => {
-    if (item.is_closed) return total;
-    const [openHour, openMinute] = item.opens_at.split(':').map(Number);
-    const [closeHour, closeMinute] = item.closes_at.split(':').map(Number);
-    return total + Math.max(0, ((closeHour * 60 + closeMinute) - (openHour * 60 + openMinute)) / 60) * (30 / 7);
-  }, 0);
+  const availableWeeklyBlocks = schedules.filter((item) =>
+    item.is_available && courts.some((court) => court.id === item.court_id && court.status === 'available')
+  ).length;
+  const capacityHours = availableWeeklyBlocks * 0.5 * (30 / 7);
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const bookedHours = activeReservations
     .filter((item) => new Date(item.starts_at).getTime() >= cutoff && new Date(item.starts_at).getTime() <= Date.now())
@@ -51,7 +49,7 @@ export function ReportsPage() {
 
   const exportCsv = () => {
     const rows = [['Fecha', 'Reserva', 'Método', 'Monto'], ...payments.map((payment) => [
-      formatDate(payment.created_at), payment.reservation_id, payment.method, String(payment.amount)
+      formatDate(payment.created_at), payment.reservation_id ?? 'Reserva eliminada', payment.method, String(payment.amount)
     ])];
     const csv = rows.map((row) => row.map((field) => `"${field.replaceAll('"', '""')}"`).join(',')).join('\r\n');
     const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));

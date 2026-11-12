@@ -23,6 +23,7 @@ export function ReservationDialog({
   const { profile } = useAuth();
   const isCustomer = profile?.role === 'customer';
   const [courtId, setCourtId] = useState(initialCourtId ?? '');
+  const [sport, setSport] = useState('Fútbol');
   const [date, setDate] = useState(initialDate ?? getTodayKey());
   const [duration, setDuration] = useState(60);
   const [customerId, setCustomerId] = useState('');
@@ -96,6 +97,7 @@ export function ReservationDialog({
         target_court_id: courtId,
         target_starts_at: startsAt,
         duration_minutes: duration,
+        target_sport: sport,
         target_customer_id: isCustomer ? null : customerId,
         target_team_id: teamId || null,
         target_notes: String(form.get('notes') ?? '') || null
@@ -116,12 +118,17 @@ export function ReservationDialog({
     <Modal title="Nueva reserva" onClose={onClose} onSubmit={(event) => void submit(event)} submitting={submitting}>
       <label className="form-field">Cancha<select value={courtId} onChange={(event) => setCourtId(event.target.value)} required>
         <option value="">Selecciona una cancha</option>
-        {availableCourts.map((court) => <option value={court.id} key={court.id}>{court.name} · {court.sport}</option>)}
+        {availableCourts.map((court) => <option value={court.id} key={court.id}>{court.name}</option>)}
+      </select></label>
+      <label className="form-field">Deporte<select name="sport" value={sport} onChange={(event) => setSport(event.target.value)} required>
+        <option value="Fútbol">Fútbol</option><option value="Otras actividades">Otras actividades</option>
       </select></label>
       <div className="form-grid">
         <label className="form-field">Fecha<input type="date" min={getTodayKey()} value={date} onChange={(event) => setDate(event.target.value)} required /></label>
         <label className="form-field">Duración<select value={duration} onChange={(event) => setDuration(Number(event.target.value))}>
-          {[60, 90, 120, 180].map((minutes) => <option value={minutes} key={minutes}>{minutes / 60} {minutes === 60 ? 'hora' : 'horas'}</option>)}
+          {[30, 60, 90, 120, 150, 180].map((minutes) => <option value={minutes} key={minutes}>
+            {minutes < 60 ? `${minutes} minutos` : minutes % 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes / 60} ${minutes === 60 ? 'hora' : 'horas'}`}
+          </option>)}
         </select></label>
       </div>
       {!isCustomer && <label className="form-field">Cliente<select value={customerId} onChange={(event) => { setCustomerId(event.target.value); setTeamId(''); }} required>
@@ -135,6 +142,7 @@ export function ReservationDialog({
         {loadingSlots ? <option value="">Consultando horarios…</option> : slots.length ? slots.map((item) => <option key={item.starts_at} value={item.starts_at}>{formatTime(item.starts_at)} – {formatTime(item.ends_at)}</option>) : <option value="">Sin horarios disponibles</option>}
       </select></label>
       <label className="form-field">Notas (opcional)<textarea name="notes" maxLength={500} rows={3} /></label>
+      <p className="form-hint">Si hay una promoción activa para esta fecha, cancha y horario, el descuento se aplicará automáticamente.</p>
       <AuthNotice error={error} />
     </Modal>
   );

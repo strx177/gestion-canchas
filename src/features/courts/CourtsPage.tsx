@@ -11,8 +11,9 @@ import { Icon } from '../../components/Icon';
 import { Modal } from '../../components/Modal';
 import { StatusBadge } from '../../components/StatusBadge';
 import { supabase } from '../../lib/supabase';
-import type { Court, CourtSchedule } from '../../types/database';
+import type { Court, CourtScheduleBlock } from '../../types/database';
 import { formatCurrency } from '../../utils/format';
+import { courtBlockStarts, formatCourtTime } from '../../utils/courtSchedule';
 
 const weekdays = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 type Dialog = { kind: 'court'; court: Court | null } | { kind: 'schedule'; court: Court } | null;
@@ -21,7 +22,7 @@ export function CourtsPage() {
   const { courts, loading, error: dataError, refresh } = useFacilityData();
   const { profile } = useAuth();
   const [dialog, setDialog] = useState<Dialog>(null);
-  const [schedules, setSchedules] = useState<CourtSchedule[]>([]);
+  const [schedules, setSchedules] = useState<CourtScheduleBlock[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const canManage = profile?.role === 'owner' || profile?.role === 'receptionist';
@@ -29,7 +30,7 @@ export function CourtsPage() {
   const editSchedule = async (court: Court) => {
     if (!supabase) return;
     setError(null);
-    const { data, error: queryError } = await supabase.from('court_schedules').select('*').eq('court_id', court.id).order('weekday');
+    const { data, error: queryError } = await supabase.from('court_schedule_blocks').select('*').eq('court_id', court.id).order('weekday').order('starts_at');
     if (queryError) { setError(queryError.message); return; }
     setSchedules(data);
     setDialog({ kind: 'schedule', court });
@@ -45,29 +46,24 @@ export function CourtsPage() {
       if (dialog.kind === 'court') {
         const values = {
           name: String(form.get('name')).trim(),
-          sport: String(form.get('sport')).trim(),
           status: String(form.get('status')),
           hourly_rate: Number(form.get('hourly_rate'))
         };
-        if (!values.name || !values.sport || !Number.isFinite(values.hourly_rate) || values.hourly_rate < 0) {
-          throw new Error('Revisa el nombre, deporte y tarifa de la cancha.');
+        if (!values.name || !Number.isFinite(values.hourly_rate) || values.hourly_rate < 0) {
+          throw new Error('Revisa el nombre y la tarifa de la cancha.');
         }
         const result = dialog.court
           ? await supabase.from('courts').update(values).eq('id', dialog.court.id)
           : await supabase.from('courts').insert(values);
         if (result.error) throw new Error(result.error.message);
       } else {
-        const rows = weekdays.map((_, weekday) => {
-          const isClosed = form.get(`closed-${weekday}`) === 'on';
-          return {
-            court_id: dialog.court.id,
-            weekday,
-            is_closed: isClosed,
-            opens_at: String(form.get(`opens-${weekday}`) || '08:00'),
-            closes_at: String(form.get(`closes-${weekday}`) || '23:00')
-          };
-        });
-        const result = await supabase.from('court_schedules').upsert(rows, { onConflict: 'court_id,weekday' });
+        const rows = weekdays.flatMap((_, weekday) => courtBlockStarts.map((start, index) => ({
+          court_id: dialog.court.id,
+          weekday,
+          starts_at: formatCourtTime(start),
+          is_available: form.get(`available-${weekday}-${index}`) === 'on'
+        })));
+        const result = await supabase.from('court_schedule_blocks').upsert(rows, { onConflict: 'court_id,weekday,starts_at' });
         if (result.error) throw new Error(result.error.message);
       }
       setDialog(null);
@@ -80,7 +76,9 @@ export function CourtsPage() {
   };
 
   const removeCourt = async (court: Court) => {
-    if (!supabase || !window.confirm(`¿Eliminar la cancha “${court.name}”?`)) return;
+    if (!supabase || !window.confirm(
+      `¿Eliminar la cancha “${court.name}”?\n\nSe eliminarán todas las reservas asociadas y sus notificaciones. Los pagos se conservarán en el historial, pero quedarán sin una reserva asociada. También se eliminarán los registros de mantenimiento de esta cancha. Esta acción no se puede deshacer.`
+    )) return;
     setError(null);
     const { error: deleteError } = await supabase.from('courts').delete().eq('id', court.id);
     if (deleteError) setError(deleteError.message);
@@ -102,7 +100,7 @@ export function CourtsPage() {
                 <div className="court-card-visual"><Icon name="court" size={34} /></div>
                 <div className="court-card-content">
                   <div className="court-card-heading">
-                    <div><h3>{court.name}</h3><p>{court.sport}</p></div>
+                    <div><h3>{court.name}</h3></div>
                     <StatusBadge status={court.status} />
                   </div>
                   <div className="court-card-info">
@@ -127,7 +125,6 @@ export function CourtsPage() {
       {dialog?.kind === 'court' && (
         <Modal title={dialog.court ? 'Editar cancha' : 'Registrar cancha'} onClose={() => setDialog(null)} onSubmit={(event) => void save(event)} submitting={submitting}>
           <label className="form-field">Nombre<input name="name" defaultValue={dialog.court?.name} required maxLength={100} /></label>
-          <label className="form-field">Deporte<input name="sport" defaultValue={dialog.court?.sport} required maxLength={80} /></label>
           <label className="form-field">Tarifa por hora (CLP)<input name="hourly_rate" type="number" min="0" step="100" defaultValue={dialog.court?.hourly_rate ?? 0} required /></label>
           <label className="form-field">Estado<select name="status" defaultValue={dialog.court?.status ?? 'available'}><option value="available">Disponible</option><option value="maintenance">Mantenimiento</option><option value="closed">Cerrada</option></select></label>
           <AuthNotice error={error} />
@@ -136,18 +133,21 @@ export function CourtsPage() {
 
       {dialog?.kind === 'schedule' && (
         <Modal title={`Horarios · ${dialog.court.name}`} onClose={() => setDialog(null)} onSubmit={(event) => void save(event)} submitting={submitting}>
-          <div className="schedule-editor">
+          <div className="schedule-editor schedule-block-editor">
             {weekdays.map((day, weekday) => {
-              const row = schedules.find((item) => item.weekday === weekday);
-              return <div className="schedule-row" key={day}>
-                <label className="schedule-day"><input type="checkbox" name={`closed-${weekday}`} defaultChecked={row?.is_closed ?? false} />{day}</label>
-                <input aria-label={`${day} apertura`} type="time" name={`opens-${weekday}`} defaultValue={row?.opens_at.slice(0, 5) ?? '08:00'} />
-                <span>a</span>
-                <input aria-label={`${day} cierre`} type="time" name={`closes-${weekday}`} defaultValue={row?.closes_at.slice(0, 5) ?? '23:00'} />
-              </div>;
+              return <details className="schedule-day-blocks" key={day} open={weekday === 1}>
+                <summary>{day}</summary>
+                <div className="schedule-block-grid">{courtBlockStarts.map((start, index) => {
+                  const row = schedules.find((item) => item.weekday === weekday && item.starts_at.slice(0, 5) === formatCourtTime(start));
+                  return <label className="schedule-block-option" key={start}>
+                    <input type="checkbox" name={`available-${weekday}-${index}`} defaultChecked={row?.is_available ?? true} />
+                    {formatCourtTime(start)}–{formatCourtTime(start + 30)}
+                  </label>;
+                })}</div>
+              </details>;
             })}
           </div>
-          <p className="form-hint">Marca la casilla para dejar el día cerrado.</p>
+          <p className="form-hint">Marca los bloques de 30 minutos disponibles entre las 08:00 y las 21:00. Los bloques están habilitados por defecto.</p>
           <AuthNotice error={error} />
         </Modal>
       )}

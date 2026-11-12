@@ -6,7 +6,6 @@ import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
 import { ReservationsPage } from '../features/reservations/ReservationsPage';
 import { CourtsPage } from '../features/courts/CourtsPage';
-import { ModulePage } from '../features/modules/ModulePage';
 import { AuthenticatedRedirect, ForgotPasswordPage, LoginPage, PublicOnlyRoute, RegisterPage, RequireAuth, RequireRoles, ResetPasswordPage } from '../features/auth/AuthPages';
 import { CustomerPortalPage } from '../features/portal/CustomerPortalPage';
 import { UserManagementPage } from '../features/users/UserManagementPage';
@@ -18,6 +17,9 @@ import { StandingsPage } from '../features/tournaments/StandingsPage';
 import { MatchesPage } from '../features/matches/MatchesPage';
 import { NotificationsPage } from '../features/notifications/NotificationsPage';
 import { ReportsPage } from '../features/reports/ReportsPage';
+import { RevenueOccupancyPage } from '../features/reports/RevenueOccupancyPage';
+import { PromotionsPage } from '../features/promotions/PromotionsPage';
+import { ActivityPage } from '../features/activity/ActivityPage';
 import { ROUTES } from './routes';
 
 const STAFF_ROLES = ['owner', 'receptionist'] as const;
@@ -58,19 +60,19 @@ export function App() {
                     <Route index element={<StandingsPage />} />
                   </Route>
                   <Route path={ROUTES.occupancy.slice(1)} element={<RequireRoles allowed={OWNER_ROLE} />}>
-                    <Route index element={<ReportsPage />} />
+                    <Route index element={<RevenueOccupancyPage />} />
                   </Route>
                   <Route path={ROUTES.reports.slice(1)} element={<RequireRoles allowed={OWNER_ROLE} />}>
                     <Route index element={<ReportsPage />} />
                   </Route>
                   <Route path={ROUTES.promotions.slice(1)} element={<RequireRoles allowed={OWNER_ROLE} />}>
-                    <Route index element={<ModulePage />} />
+                    <Route index element={<PromotionsPage />} />
                   </Route>
                   <Route path={ROUTES.users.slice(1)} element={<RequireRoles allowed={OWNER_ROLE} />}>
                     <Route index element={<UserManagementPage />} />
                   </Route>
                   <Route path={ROUTES.activity.slice(1)} element={<RequireRoles allowed={OWNER_ROLE} />}>
-                    <Route index element={<ModulePage />} />
+                    <Route index element={<ActivityPage />} />
                   </Route>
                 </Route>
               </Route>

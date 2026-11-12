@@ -7,7 +7,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { ReservationDialog } from '../reservations/ReservationDialog';
 import { StatusBadge } from '../../components/StatusBadge';
 import { supabase } from '../../lib/supabase';
-import { formatDate, formatTime } from '../../utils/format';
+import { formatCurrency, formatDate, formatTime } from '../../utils/format';
 
 export function CustomerPortalPage() {
   const { profile } = useAuth();
@@ -69,7 +69,7 @@ export function CustomerPortalPage() {
                     </div>
                     <div className="generic-copy">
                       <strong>{court?.name ?? 'Cancha no disponible'}</strong>
-                      <small>{formatDate(reservation.starts_at)} · {formatTime(reservation.starts_at)}–{formatTime(reservation.ends_at)}</small>
+                      <small>{reservation.sport} · {formatDate(reservation.starts_at)} · {formatTime(reservation.starts_at)}–{formatTime(reservation.ends_at)} · {formatCurrency(reservation.total_amount)}</small>
                     </div>
                     <StatusBadge status={reservation.status} />
                     {reservation.status === 'pending' && <button className="secondary-button danger-button" disabled={savingId === reservation.id} onClick={() => void cancel(reservation.id)}>Cancelar</button>}

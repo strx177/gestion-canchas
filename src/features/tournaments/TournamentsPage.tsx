@@ -110,7 +110,9 @@ export function TournamentsPage() {
     </section>
     {showCreate && <Modal title="Crear torneo" onClose={() => setShowCreate(false)} onSubmit={(event) => void create(event)} submitting={submitting}>
       <label className="form-field">Nombre<input name="name" required maxLength={120} /></label>
-      <label className="form-field">Deporte<input name="sport" required maxLength={80} /></label>
+      <label className="form-field">Deporte<select name="sport" defaultValue="Fútbol" required>
+        <option value="Fútbol">Fútbol</option><option value="Otras actividades">Otras actividades</option>
+      </select></label>
       <label className="form-field">Descripción<textarea name="description" rows={2} maxLength={500} /></label>
       <div className="form-grid"><label className="form-field">Inicio<input name="starts_on" type="date" required /></label><label className="form-field">Término<input name="ends_on" type="date" required /></label></div>
       <AuthNotice error={actionError} />

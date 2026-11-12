@@ -38,7 +38,11 @@ export function PaymentsPage() {
   useEffect(() => { void load(); }, [load]);
 
   const totals = new Map<string, number>();
-  for (const payment of payments) if (payment.status === 'paid') totals.set(payment.reservation_id, (totals.get(payment.reservation_id) ?? 0) + Number(payment.amount));
+  for (const payment of payments) {
+    if (payment.status === 'paid' && payment.reservation_id) {
+      totals.set(payment.reservation_id, (totals.get(payment.reservation_id) ?? 0) + Number(payment.amount));
+    }
+  }
   const pendingReservations = reservations.filter((row) => row.status !== 'cancelled' && Number(row.total_amount) > (totals.get(row.id) ?? 0));
 
   const savePayment = async (event: FormEvent<HTMLFormElement>) => {
@@ -90,7 +94,7 @@ export function PaymentsPage() {
       <section className="panel data-panel payments-history">
         <div className="panel-heading"><div><h2>Historial de pagos</h2><p>{payments.length} movimientos</p></div></div>
         {payments.length ? <div className="table-scroll"><table className="data-table"><thead><tr><th>FECHA</th><th>RESERVA</th><th>MÉTODO</th><th>REFERENCIA</th><th>MONTO</th><th>ESTADO</th><th></th></tr></thead>
-          <tbody>{payments.map((item) => <tr key={item.id}><td>{formatDate(item.created_at)}</td><td>#{item.reservation_id.slice(0, 8)}</td>
+          <tbody>{payments.map((item) => <tr key={item.id}><td>{formatDate(item.created_at)}</td><td>{item.reservation_id ? `#${item.reservation_id.slice(0, 8)}` : 'Reserva eliminada'}</td>
             <td>{methodLabels[item.method]}</td><td>{item.reference ?? '—'}</td><td>{formatCurrency(Number(item.amount))}</td>
             <td>{item.status === 'paid' ? 'Pagado' : 'Reembolsado'}</td>
             <td>{canRefund && item.status === 'paid' && <button className="secondary-button danger-button" onClick={() => void refund(item)}>Reembolsar</button>}</td></tr>)}</tbody>
